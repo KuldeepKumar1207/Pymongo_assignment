@@ -1,26 +1,36 @@
 import pymongo
-from pymongo import MongoClient,errors
+from pymongo import MongoClient,errors,ASCENDING
 from bson.objectid import ObjectId
-from pymongo import MongoClient, ASCENDING
-from pymongo.errors import DuplicateKeyError
 import re
 from datetime import datetime
 from pprint import pprint
+import config
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+MONGO_URI = os.getenv("MONGO_URI")
+DB_NAME = os.getenv("DB_NAME")
+COLLECTION_NAME = os.getenv("COLLECTION_NAME")
+
+
 
 # Task – 1: Create a Python script to establish connection with MongoDB and set up a sample database.
 # Connect to MongoDB (assume default localhost)
 
-client = MongoClient("mongodb://localhost:27017/")
+client = MongoClient(MONGO_URI)
 
 # Task – 1: Create a Python script to establish connection with MongoDB and set up a sample database.
 # Create a database called "training_db"
 
-db=client['training_db']
+db=client[DB_NAME]
 
 # Task – 1: Create a Python script to establish connection with MongoDB and set up a sample database.
 # Create a collection called "employees"
 
-collection = db['employees']
+collection = db[COLLECTION_NAME]
 
 # Task – 1: Create a Python script to establish connection with MongoDB and set up a sample database.
 # Insert 5 sample employee records with fields: name, email, department, salary, join_date
@@ -69,54 +79,74 @@ collection.insert_many
 
 # Task – 2: Implement various search and listing functionalities.
 # List All Records: Function to display all employees
-for i in collection.find():
-    pprint(i)
+def list_all_records():
+    for i in collection.find():
+        pprint(i)
+list_all_records()
 
 
 # Task – 2: Implement various search and listing functionalities.
 # Search by Department: Find employees in specific department
-for i in collection.find( { "Department" : "AI" } ):
-    pprint(i)
+def search_by_department(dept):
+    for i in collection.find( { "Department" : dept } ):
+        pprint(i)
+search_by_department("AI")
+
 
 
 # Task – 2: Implement various search and listing functionalities.
 # Search by Salary Range: Find employees within salary range
-for i in collection.find( { "Salary" : { "$gt" : 400000 , "$lt" : 800000 } } ):
-    pprint(i)
+def search_by_salary_range(min_salary, max_salary):
+    for i in collection.find( { "Salary" : { "$gt" : min_salary , "$lt" : max_salary } } ):
+        pprint(i)
+search_by_salary_range(400000,800000)
 
 
 # Task – 2: Implement various search and listing functionalities.
 # Search by Name Pattern: Find employees whose names contain specific substring
-for i in collection.find ( { "Name" : { "$regex" : "e" } } ):
-    pprint(i)
+def search_by_name_pattern(pattern):
+    regex = re.compile(pattern, re.IGNORECASE)
+    for i in collection.find( { "Name" : { "$regex" : regex } } ):
+        pprint(i)
+search_by_name_pattern("e")
+
 
 
 # Task – 2: Implement various search and listing functionalities.
 # Advanced Search: Combine multiple search criteria
-for i in collection.find ( { "Name" : { "$regex" : "e" } , "Salary" : { "$eq" : 600000 } } ):
-    pprint(i)
+def advanced_search(name_pattern, exact_salary):
+    regex = re.compile(name_pattern, re.IGNORECASE)
+    for i in collection.find( { "Name" : { "$regex" : regex } , "Salary" : { "$eq" : exact_salary } } ):
+        pprint(i)
+advanced_search("e",600000)
 
 
 # Task – 2: Implement various search and listing functionalities.
 # Sort Results: Sort employees by salary (ascending)
-for i in collection.find( { } ).sort( { "Salary" : 1 } ):
-    pprint(i)
+def sort_results_asc():
+    for i in collection.find( { } ).sort( { "Salary" : 1 } ):
+        pprint(i)
 
 
 # Task – 2: Implement various search and listing functionalities.
 # Sort Results: Sort employees by salary (descending)
-for i in collection.find( { } ).sort( { "Salary" : -1 } ):
-    pprint(i)
+def sort_results_desc():
+    for i in collection.find( { } ).sort( { "Salary" : -1 } ):
+        pprint(i)
 
 
 # Task – 2: Implement various search and listing functionalities.
 # Limit Results: Implement pagination (limit and skip)
-for i in collection.find( { } ).sort( { "Salary" : -1 } ).limit( 1 ): # using limit
-    pprint(i)
+def limit_results():
+    for i in collection.find( { } ).sort( { "Salary" : -1 } ).limit( 1 ): # using limit
+        pprint(i)
 
-for i in collection.find( { } ).sort ( { "Salary" : -1 } ).skip( 2 ): # using skip
-    pprint(i)
+def skip_results():
+    for i in collection.find( { } ).sort ( { "Salary" : -1 } ).skip( 2 ): # using skip
+        pprint(i)
 
+limit_results()
+skip_results()
 
 # Task 3:Implement functions to add new records with validation.
 # Duplicate Prevention: Prevent duplicate email addresses
@@ -157,8 +187,6 @@ try: # Single Record Insert with validations
     collection.insert_one(doc)
     pprint("Single Record Inserted")
 
-except errors.DuplicateKeyError:
-    pprint("Duplicate email already exists")
 except Exception as e:
     pprint("Error:", e)
 
@@ -227,34 +255,34 @@ if valid_docs:
 # Task -4: Implement various update operations with different scenarios.
 # Update Single Field: Update one field of an employee
 
-collection.update_one(
-    {
-        "Name":"Kuldeep11"
+def update_single_field(name, new_salary):
+    collection.update_one(
+        {
+            "Name": name
         },
-    {
-        "$set":{"Salary":9800000}
+        {
+            "$set": {"Salary": new_salary}
         }
-)
-for i in collection.find():
-    pprint(i)
+    )
+update_single_field("Kuldeep11", 9800000)
 
 
 # Task -4: Implement various update operations with different scenarios.
 # Update Multiple Fields: Update several fields at once
 
-collection.update_one(
-    {
-        "Name":"Kuldeep11"
-    },
-    {
-        "$set":
-        {
-            "Salary":800000,
-            "Email":"Kul1v1@gmail.com",
-            'Name':"Kuldeep_Kumar"
+def update_multiple_fields(name, new_salary, new_email, new_name):
+    collection.update_one(
+        {"Name": name
+        },
+        {   "$set":
+            {
+                "Salary": new_salary,
+                "Email": new_email,
+                'Name': new_name
+            }
         }
-    }
-)
+    )
+update_multiple_fields("Kuldeep11",800000,"Kul1v1@gmail.com","Kuldeep_Kumar")
 
 for i in collection.find():
     pprint(i)
@@ -262,18 +290,17 @@ for i in collection.find():
 
 # Task -4: Implement various update operations with different scenarios.
 # Update by ID: Update employee using ObjectId
-
-collection.update_one(
-    {
-        "_id":ObjectId('68c3b5a74c4841c1507d905e')
-    },
-        {
-            "$set":
-                {
-                    "Salary":800000
-                }
+def update_by_id(id, new_salary):
+    collection.update_one(
+        {"_id":ObjectId(id)
+        },
+        {   "$set":
+            {
+                "Salary": new_salary
+            }
         }
-)
+    )
+update_by_id('68c3b5a74c4841c1507d905e',900000)
 for i in collection.find():
     pprint(i)
 
@@ -281,81 +308,91 @@ for i in collection.find():
 # Task -4: Implement various update operations with different scenarios.
 # Update by Criteria: Update multiple employees matching criteria
 
-collection.update_many( { "Department":"AI" } , { "$inc" : { "Salary" : 200000 } } )
-for i in collection.find():
-    pprint(i)
+def update_by_criteria(dept, increment):
+    collection.update_many(
+        {
+            "Department":dept
+        },
+        {
+            "$inc": {"Salary": increment}
+        }
+    )
+update_by_criteria("AI",200000)
 
 
 # Task -4: Implement various update operations with different scenarios.
 # Conditional Updates: Update only if certain conditions are met
-
-collection.update_many(
-    {
-        "Name":
-            {
-                "$regex":"i"
-            }
-    },
-    [
+def conditional_update(new_sal):
+    collection.update_many(
         {
-            "$set":
-            {
-                "Salary":
+            "Name":
                 {
-                    "$cond":
+                    "$regex":"i"
+                }
+        },
+        [
+            {
+                "$set":
+                {
+                    "Salary":
                     {
-                        "if":
+                        "$cond":
                         {
-                            "$eq":
-                            [
-                                "$Department","AI/ML"
-                            ]
-                        },
-                        "then":0,"else":"$Salary"
+                            "if":
+                            {
+                                "$eq":
+                                [
+                                    "$Department","AI/ML"
+                                ]
+                            },
+                            "then":new_sal,"else":"$Salary"
+                        }
                     }
                 }
             }
-        }
-    ]
-)
+        ]
+    )
 
+
+conditional_update(750000)
 for i in collection.find():
     pprint(i)
 
 
 # Task -4: Implement various update operations with different scenarios.
 # Add Modification Timestamp: Track when record was last modified
-collection.update_many(
-    {
-        "Name":
+def add_modification_timestamp(name, new_salary):
+    collection.update_many(
         {
-            "$regex":"i"
-        }
-    },
-    [
-        {
-            "$set":
+            "Name":
             {
-                "Salary":
-                {
-                    "$cond":
-                    {
-                        "if":
-                        {
-                            "$eq":
-                            [
-                                "$Department","AI/ML"
-                            ]
-                        },
-                        "then":0,"else":"$Salary"
-                    }
-                },
-                "last_modified": datetime.utcnow()
+                name
             }
-        }
-    ]
-)
+        },
+        [
+            {
+                "$set":
+                {
+                    "Salary":
+                    {
+                        "$cond":
+                        {
+                            "if":
+                            {
+                                "$eq":
+                                [
+                                    "$Department","AI/ML"
+                                ]
+                            },
+                            "then":new_salary,"else":"$Salary"
+                        }
+                    },
+                    "last_modified": datetime.utcnow()
+                }
+            }
+        ]
+    )
 
-
+add_modification_timestamp("Kuldeep",900000)
 for i in collection.find():
     pprint(i)
